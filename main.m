@@ -1,5 +1,5 @@
 % Specify the folder containing the images
-image_folder = 'Apple';  % Replace with your folder path
+image_folder = 'Images/Apple';  % Replace with your folder path
 
 % Check if the folder exists
 if ~isfolder(image_folder)
@@ -7,7 +7,7 @@ if ~isfolder(image_folder)
 end
 
 % Load all JPG images from the folder
-image_files = dir(fullfile(image_folder, '*.jpg'));
+image_files = dir(fullfile(image_folder, "*.jpg"));
 if isempty(image_files)
     error('No JPG images found in the specified folder');
 end
@@ -16,67 +16,49 @@ end
 [~, idx] = sort({image_files.name});
 image_files = image_files(idx);
 
-% Read the first image to initialize
-img1 = imread(fullfile(image_folder, image_files(1).name));
-gray1 = rgb2gray(img1);
-
-% Detect features in the first image
-points1 = detectSURFFeatures(gray1);
-if points1.Count < 100
-    % Try with a lower threshold if not enough features
-    points1 = detectSURFFeatures(gray1, 'MetricThreshold', 100);
-end
-
 % Initialize measurement matrix
-num_frames = length(image_files);
-num_points = points1.Count;
-measurement_matrix = NaN(2 * num_frames, num_points);  % Initialize with NaN
+W = get_points(fullfile(image_folder, image_files(1).name));
 
-% Store the first frame points in the measurement matrix
-measurement_matrix(1:2, :) = points1.Location';
+for i = 2:length(image_files)
+    points = get_points(fullfile(image_folder, image_files(i).name));
 
-% Create point tracker
-tracker = vision.PointTracker('MaxBidirectionalError', 1, 'NumPyramidLevels', 3);
-initialize(tracker, points1.Location, gray1);
+    prev_points = W(:, end-1:end);
+    matches = matchFeatures(prev_points, points);
 
-% Track points through the remaining frames
-for i = 2:num_frames
-    % Read the next image
-    img = imread(fullfile(image_folder, image_files(i).name));
-    gray = rgb2gray(img);
+    matched_points = NaN(length(W), 2);
+    matched_points(matches(:,1), :) = points(matches(:,2), :);
+
+    new_points_mask = 1:length(points);
+    new_points_mask(matches(:, 2)) = NaN;
+    new_points_mask = ~isnan(new_points_mask);
     
-    % Track points
-    [points, validity] = tracker(gray);
-    
-    % Store only valid points
-    valid_points = points(validity, :);
-    
-    % Resize the measurement matrix if the number of points differs from the first frame
-    num_valid_points = size(valid_points, 1);
-    measurement_matrix(2 * i - 1:2 * i, 1:num_valid_points) = valid_points';
-    
-    % Reset the tracker if too many points are lost
-    if sum(validity) < 0.5 * num_points
-        release(tracker);
-        points1 = detectSURFFeatures(gray, 'MetricThreshold', 100);
-        initialize(tracker, points1.Location, gray);
-        fprintf('Re-initialized tracker at frame %d\n', i);
-    end
+    new_points = [NaN(sum(new_points_mask), width(W)) points(new_points_mask, :)];
+
+    W = [W matched_points];
+    W = [W; new_points];
 end
 
-release(tracker);
+%{a
+obs_plot = W;
+obs_plot(obs_plot > 0) = 255;
+image(obs_plot)
+%}
 
-% Remove points that weren't tracked in at least 50% of the frames
-tracked_frames = sum(~isnan(measurement_matrix(1:2:end, :)));
-valid_points = tracked_frames > num_frames / 2;
-measurement_matrix = measurement_matrix(:, valid_points);
+%{
+n = 3;
+imshow(fullfile(image_folder, image_files(n).name)); hold on;
+scatter(W(:, 2*n-1), W(:, 2*n), "LineWidth", 2);
+%}
 
-fprintf('Final measurement matrix size: %dx%d\n', size(measurement_matrix));
-fprintf('Percentage of valid tracks: %.1f%%\n', 100 * sum(~isnan(measurement_matrix(:))) / numel(measurement_matrix));
+%{
+img1 = imshow(fullfile(image_folder, image_files(1).name));
+img2 = imshow(fullfile(image_folder, image_files(2).name));
+showMatchedFeatures(img1, img2, W(), matchedPoints2);
+%}
 
-% Save the measurement matrix to a CSV file with the folder name
-output_file = strcat(image_folder, '_measurement_matrix.csv');
-csvwrite(output_file, measurement_matrix);
+function points = get_points(file)
+    img = imread(file);
+    img_gray = im2gray(img);
 
-fprintf('Measurement matrix saved as: %s\n', output_file);
-
+    points = detectSURFFeatures(img_gray, 'MetricThreshold', 200).Location;
+end
