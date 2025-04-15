@@ -1,78 +1,77 @@
-% Specify the folder containing the images
-image_folder = 'C:\Users\seohy\Documents\EECS351\eecs351-sfm\Images';  % Replace with your folder path
+global imageFolder blockSize k threshold
+imageFolder = "Images/Block/ortho";
+blockSize = 11;
+k = 0.04;
+threshold = 1e+7;
 
-% Check if the folder exists
-if ~isfolder(image_folder)
-    error('The specified folder does not exist.');
-end
+image = "0013.png";
 
-% Load all JPG images from the folder
-image_files = dir(fullfile(image_folder, '*.jpg'));
-if isempty(image_files)
-    error('No JPG images found in the specified folder');
-end
+points = getPointsHarris(image);
 
-% Sort files by name to ensure correct order
-[~, idx] = sort({image_files.name});
-image_files = image_files(idx);
+function points = getPointsHarris(image)
+    global imageFolder blockSize k threshold
 
-% Read the first image to initialize
-img1 = imread(fullfile(image_folder, image_files(1).name));
-img1 = rgb2gray(img1);
+    padDepth = floor(blockSize/2);
 
-% Detect corners in the first image.
-prevPoints = detectMinEigenFeatures(img1, MinQuality=0.001);
+    Dx = [
+        -1 0 1;
+        -2 0 2;
+        -1 0 1
+    ];
 
-% Create the point tracker object to track the points across views.
-tracker = vision.PointTracker(MaxBidirectionalError=1, NumPyramidLevels=6);
+    Dy = [
+        -1 -2 -1;
+         0  0  0;
+         1  2  1
+    ];
 
-% Initialize the point tracker.
-prevPoints = prevPoints.Location;
-initialize(tracker, prevPoints, img1);
-
-vSet = imageviewset;
-viewId = 1;
-vSet = addView(vSet, viewId, rigidtform3d, Points=prevPoints);
-
-% Store the dense points in the view set.
-
-vSet = updateConnection(vSet, 1, 2, Matches=zeros(0, 2));
-vSet = updateView(vSet, 1, Points=prevPoints);
-
-num_frames = length(image_files);
-
-% Track the points across all views.
-for i = 2:num_frames
-    % Read and undistort the current image.
-    I = imread(fullfile(image_folder, image_files(1).name));
-    I = rgb2gray(I);
+    imgRaw = imread(fullfile(imageFolder, image));
     
-    % Track the points.
-    [currPoints, validIdx] = step(tracker, I);
-    
-    % Clear the old matches between the points.
-    if i < num_frames
-        vSet = updateConnection(vSet, i, i+1, Matches=zeros(0, 2));
+    img = im2gray(imgRaw);
+
+    imgOut = zeros(size(img));
+
+    for y=(1+padDepth):(size(img,1)-padDepth)
+        for x=(1+padDepth):(size(img,2)-padDepth)
+            window = double(img(y-padDepth:y+padDepth, x-padDepth:x+padDepth));
+
+            Ix = conv2(window, Dx, "valid");
+            Iy = conv2(window, Dy, "valid");
+
+            H = [
+                sum(Ix.^2, "all") sum(Ix.*Iy, "all"); 
+                sum(Ix.*Iy, "all") sum(Iy.^2, "all")
+            ];
+
+            imgOut(y, x) = det(H) - k * trace(H)^2;
+        end
     end
-    vSet = updateView(vSet, i, Points=currPoints);
-    
-    % Store the point matches in the view set.
-    matches = repmat((1:size(prevPoints, 1))', [1, 2]);
-    matches = matches(validIdx, :);        
-    vSet = updateConnection(vSet, i-1, i, Matches=matches);
+
+    imgCorners = zeros(size(img));
+    for y=(1+7):(size(img,1)-7)
+        for x=(1+7):(size(img,2)-7)
+            window = double(imgOut(y-7:y+7, x-7:x+7));
+
+            imgCorners(y, x) = (maxk(window(:), 1) == imgOut(y, x)) & (imgOut(y, x) > threshold);
+        end
+    end
+
+    idx = find(imgCorners);
+
+    y = mod(idx, size(imgOut, 1));
+    x = ceil(idx/size(imgOut, 1));
+
+    corners = single([x, y]);
+
+    points = corners(1, :);
+    for i=2:length(corners)
+        newPoint = corners(i, :);
+
+        if min((points(:, 1) - newPoint(1)).^2 + (points(:, 2) - newPoint(2)).^2) > 100
+            points = [points; newPoint];
+        end
+    end
+
+    imshow(imgRaw); hold on;
+    scatter(points(:, 1), points(:, 2), "linewidth", 2)
 end
-
-% Find point tracks across all views.
-tracks = findTracks(vSet);
-
-% Find point tracks across all views.
-camPoses = poses(vSet);
-
-% Triangulate initial locations for the 3-D world points.
-xyzPoints = triangulateMultiview(tracks, camPoses,...
-    intrinsics);
-
-% Refine the 3-D world points and camera poses.
-[xyzPoints, camPoses, reprojectionErrors] = bundleAdjustment(...
-    xyzPoints, tracks, camPoses, intrinsics, FixedViewId=1, ...
-    PointsUndistorted=true);
