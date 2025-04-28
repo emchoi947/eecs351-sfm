@@ -7,7 +7,7 @@ if ~exist(featureFolder, 'dir')
     mkdir(featureFolder);
 end
 
-imageFiles = dir(fullfile(enhancedFolder, '*.JPG'));  % Use *.png if needed
+imageFiles = dir(fullfile(enhancedFolder, '*.JPG'));  
 numImages = length(imageFiles);
 
 for i = 1:numImages
