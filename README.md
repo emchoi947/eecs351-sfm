@@ -24,6 +24,8 @@ REALISTIC PIPELINE:
 
 In order to recreate this output, go into the Realistic directory in the code repository.  
 Then run the demo_preprocessing.m file before running the demo_pipeline.m file. This should result in a folder of enhanced images as well as the 3D point cloud.  
+
+For the best results, run demo_preprocessing.m and run demo_pipeline.m twice without clearing the workspace.
   
 DATASET:
 Artificial box/shoebox video were created by us.  
