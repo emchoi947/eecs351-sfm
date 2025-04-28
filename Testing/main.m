@@ -1,5 +1,5 @@
 % Specify the folder containing the images
-image_folder = 'Images/Apple';  % Replace with your folder path
+image_folder = 'Images/Apple';  
 
 % Check if the folder exists
 if ~isfolder(image_folder)
