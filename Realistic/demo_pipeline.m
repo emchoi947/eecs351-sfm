@@ -51,7 +51,9 @@ function videoTo3DModelFromEnhanced()
             vSet = addConnection(vSet, i-1, i, 'Matches', indexPairs(inlierIdx,:));
             
             prevPose = poses(vSet, i-1);
-            absOrient = prevPose.Orientation{1} * relOrient;
+            %absOrient = prevPose.Orientation{1} * relOrient;
+            absOrient = prevPose.Orientation{1};
+            absOrient = absOrient* relOrient;
             absLoc = prevPose.Location{1} + relLoc * prevPose.Orientation{1};
             
             vSet = updateView(vSet, i, 'Orientation', absOrient, 'Location', absLoc);
