@@ -1,4 +1,4 @@
-input_video = 'box.mp4';  % Your input video file
+input_video = 'box.mp4';  
 output_folder = 'enhanced_frames';  
 
 if ~exist(output_folder, 'dir')
