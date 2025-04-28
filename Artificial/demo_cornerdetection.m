@@ -1,6 +1,8 @@
 global imageFolder blockSize k threshold
 imageFolder = "Images";
 blockSize = 11;
+%in order to get the desired detection for a new image, the k and threshold
+%values must be tuned by the user
 k = 0.06;
 threshold = 1e+7;
 
