@@ -36,50 +36,61 @@ Wy = [
 
 W = [Wx; Wy];
 
+%centroid subtract W
 [r, c] = size(W);
 for n = 1:r
     avg = sum(W(n,:), 'all')/r;
     W(n,:) = W(n,:) - avg;
 end
 
+%singular value decomposition into 3 parts, then into 2
 [U,S,V] = svd(W);
 U1 = U(:,1:3);
 S1 = S(1:3,1:3);
 V = V';
 V1 = V(1:3,:);
 
-R_hat = U1*sqrtm(S1);
+M_hat = U1*sqrtm(S1);
 S_hat = sqrtm(S1)*V1;
 
-L = [];
-Ro = [];
 
-for i = 1:size(R_hat, 1)/2
-    G_k1 = R_hat(2*i-1, :);
-    r11 = G_k1(1); r12 = G_k1(2); r13 = G_k1(3);
+
+A = [];
+B = [];
+
+%going through one frame at a time
+for i = 1:r/2
+    %getting the i and j vectors for each frame
+    m11 = M_hat(2*i-1,1);
+    m12 = M_hat(2*i-1,2);
+    m13 = M_hat(2*i-1,3);
+    m21 = M_hat(2*i,1);
+    m22 = M_hat(2*i,2);
+    m23 = M_hat(2*i,3);
    
-    G_k2 = R_hat(2*i, :);
-    r21 = G_k2(1); r22 = G_k2(2); r23 = G_k2(3);
-   
-    L = [L;
-         r11*r11 r11*r12+r12*r11 r11*r13+r13*r11 r12*r12 r13*r12+r12*r13 r13*r13;
-         r21*r21 r21*r22+r22*r21 r21*r23+r23*r21 r22*r22 r23*r22+r22*r23 r23*r23;
-         r11*r21 r11*r22+r12*r21 r11*r23+r13*r21 r12*r22 r12*r23+r22*r13 r13*r23];
-       
-    Ro = [Ro; 1; 1; 0];
+    %first row is i^T * i, second row is j^T * j, third row is i^T * j
+    A = [A;
+         m11*m11 m11*m12+m12*m11 m11*m13+m13*m11 m12*m12 m13*m12+m12*m13 m13*m13;
+         m21*m21 m21*m22+m22*m21 m21*m23+m23*m21 m22*m22 m23*m22+m22*m23 m23*m23;
+         m11*m21 m11*m22+m12*m21 m11*m23+m13*m21 m12*m22 m12*m23+m22*m13 m13*m23];
+    
+    %now these have to be equal to 1 1 and 0 respectively
+    B = [B; 1; 1; 0];
 end
 
-QQT = L \ Ro;
+%get each rows solution for all frames
+QQT_prime = A \ B;
 
-LT = [QQT(1), QQT(2), QQT(3);
-      QQT(2), QQT(4), QQT(5);
-      QQT(3), QQT(5), QQT(6)];
+%put it in proper dimensions
+QQT = [QQT_prime(1), QQT_prime(2), QQT_prime(3);
+      QQT_prime(2), QQT_prime(4), QQT_prime(5);
+      QQT_prime(3), QQT_prime(5), QQT_prime(6)];
 
-% metric correction matrix.
-Q = chol(LT);
+%use choelsky decomposition to get Q separate from Q^T
+Q = chol(QQT);
 
-% Step 6: recover rotation and structure
-R = R_hat*Q;
+%now recover motion and structure
+M = M_hat*Q;
 S = Q^(-1)*S_hat;
 
 
