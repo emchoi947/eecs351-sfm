@@ -1,3 +1,4 @@
+%MANUAL measurement matrix (also in measurementmatrix.m
 Wx = [
     858  768  893  1107 769  894  1107 392  1009 1486 390  1016 1486;
     789  684  798  1014 691  805  1021 304  869  1409 304  873  1409;

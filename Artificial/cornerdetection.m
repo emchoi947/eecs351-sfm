@@ -1,7 +1,7 @@
 global imageFolder blockSize k threshold
-imageFolder = "Images/Block/ortho";
+imageFolder = "Images";
 blockSize = 11;
-k = 0.04;
+k = 0.06;
 threshold = 1e+7;
 
 image = "0013.png";
