@@ -5,7 +5,7 @@ function videoTo3DModelFromEnhanced()
     
     % Camera intrinsics (assumed parameters)
     focalLength = [1500, 1500];
-    principalPoint = [640, 360];  % Assuming 1280x720 images
+    principalPoint = [640, 360];  
     imageSize = [720, 1280];
     intrinsics = cameraIntrinsics(focalLength, principalPoint, imageSize);
     
