@@ -1,11 +1,10 @@
 DIRECTORIES:  
 ARTIFICIAL -- code for our artificial pipeline, with measurementmatrix.m that has our manually created measurement matrix  
-IMAGES -- images for our artificial dataset, and an apple dataset we used for testing earlier in the project  
+IMAGES -- images for our artificial dataset, the elephant dataset we used for testing SURF detection, and an apple dataset we used for testing earlier in the project  
 REALISTIC -- realistic dataset (box.mp4) and code for the realistic pipeline  
 TESTING -- old code from earlier in the project that we used for testing various approaches  
   
 ARTIFICIAL PIPELINE:  
-  
 Corner detection:
 ![image](https://github.com/user-attachments/assets/ebd96449-8ce4-4fa7-ab46-5cdd3564c4b8)
   
@@ -25,3 +24,7 @@ REALISTIC PIPELINE:
 
 In order to recreate this output, go into the Realistic directory in the code repository.  
 Then run the demo_preprocessing.m file before running the demo_pipeline.m file. This should result in a folder of enhanced images as well as the 3D point cloud.  
+  
+DATASET:
+Artificial box/shoebox video were created by us.  
+The elephant and apple datasets were found in this Github: https://github.com/sunbuny/3D-Recon_3D-DL_Datasets/tree/master/Datasets under the elephant and apple folders.  
